@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { authAPI, userAPI, paymentAPI, prayerAPI } from "./endpoints";
+import { authAPI, userAPI, paymentAPI, dailyLogAPI } from "./endpoints";
 import type { AuthCredentials, OnboardingData } from "@/lib/types";
 
 // Query Keys
@@ -52,7 +52,7 @@ export const useLogout = () => {
 export const useUserProfile = () => {
   return useQuery({
     queryKey: queryKeys.user,
-    queryFn: () => userAPI.getProfile(),
+    queryFn: () => authAPI.getMe(),
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 };
@@ -85,34 +85,11 @@ export const useCreateSubscription = () => {
   });
 };
 
-export const useCreateTip = () => {
-  return useMutation({
-    mutationFn: ({ amount, currency }: { amount: number; currency: string }) =>
-      paymentAPI.createTip(amount, currency),
-  });
-};
-
 // Prayer Hooks
-export const useSyncPrayers = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: ({
-      dailyLogs,
-      rakatStats,
-    }: {
-      dailyLogs: Record<string, any>;
-      rakatStats: Record<string, number>;
-    }) => prayerAPI.syncLogs(dailyLogs, rakatStats),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.prayers });
-    },
-  });
-};
-
 export const usePrayerLogs = (startDate: string, endDate: string) => {
   return useQuery({
     queryKey: queryKeys.prayerLogs(startDate, endDate),
-    queryFn: () => prayerAPI.getLogs(startDate, endDate),
+    queryFn: () => dailyLogAPI.getLogs(startDate, endDate),
     enabled: !!startDate && !!endDate,
   });
 };

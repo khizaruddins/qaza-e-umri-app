@@ -24,6 +24,8 @@ export const authAPI = {
     apiClient.post<any, AuthResponse>("/auth/refresh", { refreshToken }),
 
   getMe: () => apiClient.get<any, User>("/auth/me"),
+
+  logout: () => apiClient.post<any, void>("/auth/logout", {}),
 };
 
 // User APIs
