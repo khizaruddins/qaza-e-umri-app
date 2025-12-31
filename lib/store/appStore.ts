@@ -1,0 +1,408 @@
+import { create } from "zustand";
+import { persist } from "zustand/middleware";
+import type {
+  User,
+  DailyLog,
+  RakatStats,
+  NamazId,
+  ApiDailyLog,
+  AuthCredentials,
+  OnboardingData,
+  Notification,
+} from "@/lib/types";
+import { STORAGE_KEY, NAMAZ_TYPES } from "@/lib/constants";
+import {
+  authAPI,
+  userAPI,
+  qazaAPI,
+  dailyLogAPI,
+  statsAPI,
+  paymentAPI,
+  notificationAPI,
+} from "@/lib/api/endpoints";
+
+interface AppState {
+  // State
+  user: User | null;
+  dailyLogs: Record<string, DailyLog>;
+  rakatStats: RakatStats;
+  notifications: Notification[];
+  isLoading: boolean;
+  error: string | null;
+
+  // Auth Actions
+  login: (credentials: Omit<AuthCredentials, "name">) => Promise<void>;
+  signup: (credentials: AuthCredentials) => Promise<void>;
+  logout: () => void;
+  checkAuth: () => Promise<void>;
+
+  // Data Actions
+  fetchInitialData: () => Promise<void>;
+  fetchDailyLogs: (startDate: string, endDate: string) => Promise<void>;
+  fetchNotifications: () => Promise<void>;
+  markNotificationAsRead: (id: string) => Promise<void>;
+
+  // User Actions
+  updateUser: (updates: Partial<User>) => Promise<void>;
+  completeOnboarding: (data: OnboardingData) => Promise<void>;
+  createSubscription: (amount: number, currency: string) => Promise<string>;
+  submitPaymentProof: (
+    transactionId: string,
+    subscriptionId?: string
+  ) => Promise<void>;
+  checkSubscriptionStatus: () => Promise<void>;
+
+  // Daily Logs
+  toggleDailyPrayer: (
+    date: string,
+    prayerId: NamazId,
+    type: "ada" | "qaza"
+  ) => Promise<void>;
+  getDailyLog: (date: string) => DailyLog;
+
+  // Rakat Stats
+  adjustRakatDebt: (
+    prayerId: NamazId,
+    amount: number,
+    operation: "add" | "subtract"
+  ) => Promise<void>;
+  calculateInitialDebt: (years: number, isPremium: boolean) => Promise<void>;
+  resetDebt: () => Promise<void>;
+
+  // Utility
+  resetApp: () => void;
+}
+
+const initialRakatStats: RakatStats = {
+  fajr: 0,
+  dhuhr: 0,
+  asr: 0,
+  maghrib: 0,
+  isha: 0,
+  witr: 0,
+};
+
+// Helper to convert ApiDailyLog to internal DailyLog
+const convertApiLogToDailyLog = (apiLog: ApiDailyLog): DailyLog => {
+  return {
+    ada: {
+      fajr: apiLog.adaFajr,
+      dhuhr: apiLog.adaDhuhr,
+      asr: apiLog.adaAsr,
+      maghrib: apiLog.adaMaghrib,
+      isha: apiLog.adaIsha,
+      witr: apiLog.adaWitr,
+    },
+    qaza: {
+      fajr: apiLog.qazaFajr,
+      dhuhr: apiLog.qazaDhuhr,
+      asr: apiLog.qazaAsr,
+      maghrib: apiLog.qazaMaghrib,
+      isha: apiLog.qazaIsha,
+      witr: apiLog.qazaWitr,
+    },
+  };
+};
+
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      // Initial State
+      user: null,
+      dailyLogs: {},
+      rakatStats: initialRakatStats,
+      notifications: [],
+      isLoading: false,
+      error: null,
+
+      // Auth Actions
+      login: async (credentials) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await authAPI.login(credentials);
+          // Token is handled by HTTP-only cookie
+          set({ user: response.user, isLoading: false });
+          await get().fetchInitialData();
+        } catch (error: any) {
+          set({ error: error.message || "Login failed", isLoading: false });
+          throw error;
+        }
+      },
+
+      signup: async (credentials) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await authAPI.signup(credentials);
+          console.log("Signup response:", response);
+          // Token is handled by HTTP-only cookie
+          set({ user: response.user, isLoading: false });
+          await get().fetchInitialData();
+        } catch (error: any) {
+          set({ error: error.message || "Signup failed", isLoading: false });
+          throw error;
+        }
+      },
+
+      logout: () => {
+        // Call API to clear cookie if needed, or just clear local state
+        // Ideally call authAPI.logout() if it exists
+        set({ user: null, dailyLogs: {}, rakatStats: initialRakatStats });
+        if (typeof window !== "undefined") {
+          window.location.href = "/auth";
+        }
+      },
+
+      checkAuth: async () => {
+        set({ isLoading: true });
+        try {
+          const user = await authAPI.getMe();
+          set({ user, isLoading: false });
+          await get().fetchInitialData();
+        } catch (error) {
+          console.error("Failed to check auth", error);
+          set({ user: null, isLoading: false });
+        }
+      },
+
+      // Data Actions
+      fetchInitialData: async () => {
+        set({ isLoading: true });
+        try {
+          const [debt] = await Promise.all([
+            qazaAPI.getDebt(),
+            get().checkSubscriptionStatus(),
+            get().fetchNotifications(),
+          ]);
+          set({ rakatStats: debt, isLoading: false });
+        } catch (error: any) {
+          set({
+            error: error.message || "Failed to fetch data",
+            isLoading: false,
+          });
+        }
+      },
+
+      fetchNotifications: async () => {
+        try {
+          const notifications = await notificationAPI.getAll();
+          set({ notifications });
+        } catch (error) {
+          console.error("Failed to fetch notifications", error);
+        }
+      },
+
+      markNotificationAsRead: async (id) => {
+        try {
+          await notificationAPI.markAsRead(id);
+          set((state) => ({
+            notifications: state.notifications.map((n) =>
+              n.id === id ? { ...n, isRead: true } : n
+            ),
+          }));
+        } catch (error) {
+          console.error("Failed to mark notification as read", error);
+        }
+      },
+
+      fetchDailyLogs: async (startDate, endDate) => {
+        try {
+          const logs = await dailyLogAPI.getLogs(startDate, endDate);
+          const logsMap: Record<string, DailyLog> = {};
+          logs.forEach((log) => {
+            logsMap[log.date] = convertApiLogToDailyLog(log);
+          });
+          set((state) => ({
+            dailyLogs: { ...state.dailyLogs, ...logsMap },
+          }));
+        } catch (error) {
+          console.error("Failed to fetch logs", error);
+        }
+      },
+
+      // User Actions
+      updateUser: async (updates) => {
+        try {
+          const updatedUser = await userAPI.updateProfile(updates);
+          set({ user: updatedUser });
+        } catch (error) {
+          console.error("Failed to update profile", error);
+          throw error;
+        }
+      },
+
+      completeOnboarding: async (data) => {
+        try {
+          const updatedUser = await userAPI.completeOnboarding(data);
+          set({ user: updatedUser });
+        } catch (error) {
+          console.error("Failed to complete onboarding", error);
+          throw error;
+        }
+      },
+
+      createSubscription: async (amount, currency) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await paymentAPI.createSubscription({
+            amount,
+            currency,
+          });
+          set({ isLoading: false });
+          return response.subscriptionId;
+        } catch (error: any) {
+          set({
+            error: error.message || "Failed to create subscription",
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      submitPaymentProof: async (transactionId, subscriptionId) => {
+        set({ isLoading: true, error: null });
+        try {
+          await paymentAPI.submitProof({
+            transactionId,
+            subscriptionId,
+          });
+          set({ isLoading: false });
+        } catch (error: any) {
+          set({
+            error: error.message || "Failed to submit payment proof",
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      checkSubscriptionStatus: async () => {
+        try {
+          const status = await userAPI.getSubscriptionStatus();
+          if (status.isPremium) {
+            // Update user state if premium status changed
+            const currentUser = get().user;
+            if (currentUser && !currentUser.isPremium) {
+              set({ user: { ...currentUser, isPremium: true } });
+            }
+          }
+        } catch (error) {
+          console.error("Failed to check subscription status", error);
+        }
+      },
+
+      // Daily Prayer Actions
+      toggleDailyPrayer: async (date, prayerId, type) => {
+        const state = get();
+        const dayLog = state.dailyLogs[date] || { ada: {}, qaza: {} };
+        const currentVal = !!dayLog[type]?.[prayerId];
+        const newVal = !currentVal;
+
+        // Optimistic Update
+        const updatedLog: DailyLog = {
+          ...dayLog,
+          [type]: { ...dayLog[type], [prayerId]: newVal },
+        };
+
+        const newRakatStats = { ...state.rakatStats };
+        if (type === "qaza") {
+          const change = newVal ? -1 : 1;
+          newRakatStats[prayerId] = Math.max(
+            0,
+            (state.rakatStats[prayerId] || 0) + change
+          );
+        }
+
+        set({
+          dailyLogs: { ...state.dailyLogs, [date]: updatedLog },
+          rakatStats: newRakatStats,
+        });
+
+        try {
+          await dailyLogAPI.togglePrayer(date, {
+            type,
+            prayer: prayerId,
+            status: newVal,
+          });
+        } catch (error) {
+          // Revert on failure
+          console.error("Failed to toggle prayer", error);
+          set({
+            dailyLogs: { ...state.dailyLogs, [date]: dayLog },
+            rakatStats: state.rakatStats,
+          });
+        }
+      },
+
+      getDailyLog: (date) => {
+        const state = get();
+        return state.dailyLogs[date] || { ada: {}, qaza: {} };
+      },
+
+      // Rakat Stats Actions
+      adjustRakatDebt: async (prayerId, amount, operation) => {
+        const state = get();
+        const currentVal = state.rakatStats[prayerId] || 0;
+        const newVal =
+          operation === "add"
+            ? currentVal + amount
+            : Math.max(0, currentVal - amount);
+
+        // Optimistic update
+        set({
+          rakatStats: { ...state.rakatStats, [prayerId]: newVal },
+        });
+
+        try {
+          await qazaAPI.adjustDebt({ prayer: prayerId, amount, operation });
+        } catch (error) {
+          // Revert
+          set({ rakatStats: state.rakatStats });
+          console.error("Failed to adjust debt", error);
+        }
+      },
+
+      calculateInitialDebt: async (years, isPremium) => {
+        try {
+          const debt = await qazaAPI.calculateDebt({
+            years,
+            calculationMethod: "standard",
+          });
+          set({ rakatStats: debt });
+          // Also update user locally if needed, but API should handle it
+          const user = await authAPI.getMe();
+          set({ user });
+        } catch (error) {
+          console.error("Failed to calculate debt", error);
+          throw error;
+        }
+      },
+
+      resetDebt: async () => {
+        try {
+          const debt = await qazaAPI.resetDebt();
+          set({ rakatStats: debt });
+        } catch (error) {
+          console.error("Failed to reset debt", error);
+        }
+      },
+
+      // Utility
+      resetApp: () => {
+        localStorage.removeItem("auth_token");
+        set({
+          user: null,
+          dailyLogs: {},
+          rakatStats: initialRakatStats,
+        });
+      },
+    }),
+    {
+      name: STORAGE_KEY,
+      partialize: (state) => ({
+        // Only persist user and maybe stats for offline viewing
+        user: state.user,
+        rakatStats: state.rakatStats,
+      }),
+    }
+  )
+);
