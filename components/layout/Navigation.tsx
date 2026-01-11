@@ -8,6 +8,7 @@ import {
   BookOpen,
   Settings,
   Bell,
+  Clock,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 
@@ -19,7 +20,10 @@ export function Navigation() {
 
   const navItems = [
     { href: "/dashboard", icon: TrendingUp, label: "Focus" },
-    ...(user?.trackingMode === "CHECKLIST" || user?.isPremium
+    ...(user?.trackingMode === "CHECKLIST"
+      ? [{ href: "/pending-debts", icon: Clock, label: "Debts" }]
+      : []),
+    ...(user?.trackingMode === "CHECKLIST"
       ? [{ href: "/calendar", icon: CalendarIcon, label: "Calendar" }]
       : []),
     { href: "/library", icon: BookOpen, label: "Hadith" },

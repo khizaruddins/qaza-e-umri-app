@@ -58,6 +58,14 @@ interface AppState {
     prayerId: NamazId,
     type: "ada" | "qaza"
   ) => Promise<void>;
+  batchUpdatePrayers: (
+    date: string,
+    prayers: Array<{
+      type: "ada" | "qaza";
+      prayer: NamazId;
+      status: boolean;
+    }>
+  ) => Promise<void>;
   getDailyLog: (date: string) => DailyLog;
 
   // Rakat Stats
@@ -120,7 +128,15 @@ export const useAppStore = create<AppState>()(
         set({ isLoading: true, error: null });
         try {
           const response = await authAPI.login(credentials);
-          // Token is handled by HTTP-only cookie
+
+          // Save tokens to localStorage
+          if (response.accessToken) {
+            localStorage.setItem("access_token", response.accessToken);
+          }
+          if (response.refreshToken) {
+            localStorage.setItem("refresh_token", response.refreshToken);
+          }
+
           set({ user: response.user, isLoading: false });
           await get().fetchInitialData();
         } catch (error: any) {
@@ -134,7 +150,15 @@ export const useAppStore = create<AppState>()(
         try {
           const response = await authAPI.signup(credentials);
           console.log("Signup response:", response);
-          // Token is handled by HTTP-only cookie
+
+          // Save tokens to localStorage
+          if (response.accessToken) {
+            localStorage.setItem("access_token", response.accessToken);
+          }
+          if (response.refreshToken) {
+            localStorage.setItem("refresh_token", response.refreshToken);
+          }
+
           set({ user: response.user, isLoading: false });
           await get().fetchInitialData();
         } catch (error: any) {
@@ -144,15 +168,36 @@ export const useAppStore = create<AppState>()(
       },
 
       logout: () => {
-        // Call API to clear cookie if needed, or just clear local state
-        // Ideally call authAPI.logout() if it exists
+        // Clear tokens from localStorage
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+        }
+
+        // Call API to clear server-side session
+        try {
+          authAPI.logout();
+        } catch (error) {
+          console.error("Failed to logout on server", error);
+        }
+
         set({ user: null, dailyLogs: {}, rakatStats: initialRakatStats });
+
         if (typeof window !== "undefined") {
           window.location.href = "/auth";
         }
       },
 
       checkAuth: async () => {
+        // Only check auth if we have a token
+        const hasToken =
+          typeof window !== "undefined" && localStorage.getItem("access_token");
+
+        if (!hasToken) {
+          set({ user: null, isLoading: false });
+          return;
+        }
+
         set({ isLoading: true });
         try {
           const user = await authAPI.getMe();
@@ -161,6 +206,12 @@ export const useAppStore = create<AppState>()(
         } catch (error) {
           console.error("Failed to check auth", error);
           set({ user: null, isLoading: false });
+
+          // Clear invalid tokens
+          if (typeof window !== "undefined") {
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("refresh_token");
+          }
         }
       },
 
@@ -333,6 +384,53 @@ export const useAppStore = create<AppState>()(
         }
       },
 
+      batchUpdatePrayers: async (date, prayers) => {
+        const state = get();
+        const dayLog = state.dailyLogs[date] || { ada: {}, qaza: {} };
+        const originalLog = { ...dayLog };
+        const originalStats = { ...state.rakatStats };
+
+        // Optimistic Update
+        const updatedLog: DailyLog = {
+          ada: { ...dayLog.ada },
+          qaza: { ...dayLog.qaza },
+        };
+        const newRakatStats = { ...state.rakatStats };
+
+        prayers.forEach(({ type, prayer, status }) => {
+          updatedLog[type] = { ...updatedLog[type], [prayer]: status };
+
+          // Update rakat stats for qaza prayers
+          if (type === "qaza") {
+            const oldVal = dayLog.qaza?.[prayer] || false;
+            if (status !== oldVal) {
+              const change = status ? -1 : 1;
+              newRakatStats[prayer] = Math.max(
+                0,
+                (newRakatStats[prayer] || 0) + change
+              );
+            }
+          }
+        });
+
+        set({
+          dailyLogs: { ...state.dailyLogs, [date]: updatedLog },
+          rakatStats: newRakatStats,
+        });
+
+        try {
+          await dailyLogAPI.batchUpdatePrayers(date, { prayers });
+        } catch (error) {
+          // Revert on failure
+          console.error("Failed to batch update prayers", error);
+          set({
+            dailyLogs: { ...state.dailyLogs, [date]: originalLog },
+            rakatStats: originalStats,
+          });
+          throw error;
+        }
+      },
+
       getDailyLog: (date) => {
         const state = get();
         return state.dailyLogs[date] || { ada: {}, qaza: {} };
@@ -388,7 +486,13 @@ export const useAppStore = create<AppState>()(
 
       // Utility
       resetApp: () => {
-        localStorage.removeItem("auth_token");
+        // Clear all tokens
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
+          localStorage.removeItem("auth_token");
+        }
+
         set({
           user: null,
           dailyLogs: {},

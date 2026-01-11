@@ -96,6 +96,23 @@ export const dailyLogAPI = {
     date: string,
     data: { type: "ada" | "qaza"; prayer: NamazId; status: boolean }
   ) => apiClient.patch<any, ApiDailyLog>(`/daily-logs/${date}`, data),
+
+  batchUpdatePrayers: (
+    date: string,
+    data: {
+      prayers: Array<{
+        type: "ada" | "qaza";
+        prayer: NamazId;
+        status: boolean;
+      }>;
+    }
+  ) => apiClient.patch<any, ApiDailyLog>(`/daily-logs/${date}/batch`, data),
+
+  getUncheckedLogs: () =>
+    apiClient.get<any, ApiDailyLog[]>("/daily-logs/unchecked/all"),
+
+  getDateWiseLogs: (params?: { startDate?: string; endDate?: string }) =>
+    apiClient.get<any, ApiDailyLog[]>("/daily-logs/date-wise/all", { params }),
 };
 
 // Statistics APIs

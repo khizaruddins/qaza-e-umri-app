@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Check, History } from "lucide-react";
 import { useAppStore, useUIStore } from "@/lib/store";
 import { checkDateAccess } from "@/lib/utils";
@@ -19,16 +20,37 @@ export function PrayerCard({ prayer }: PrayerCardProps) {
   const selectedDate = useUIStore((state) => state.selectedDate);
   const setShowUpgrade = useUIStore((state) => state.setShowUpgrade);
   const getDailyLog = useAppStore((state) => state.getDailyLog);
-  const toggleDailyPrayer = useAppStore((state) => state.toggleDailyPrayer);
+  const addPendingChange = useUIStore((state) => state.addPendingChange);
+  const allPendingChanges = useUIStore((state) => state.pendingChanges);
+
+  // Memoize pending changes to prevent infinite loop
+  const pendingChanges = useMemo(
+    () => allPendingChanges[selectedDate] || [],
+    [allPendingChanges, selectedDate]
+  );
 
   const dayLog = getDailyLog(selectedDate);
+
+  // Check if there's a pending change for this prayer
+  const getPrayerStatus = (type: "ada" | "qaza") => {
+    const pending = pendingChanges.find(
+      (c) => c.prayer === prayer.id && c.type === type
+    );
+    if (pending) return pending.status;
+    return dayLog[type]?.[prayer.id as NamazId] || false;
+  };
 
   const handleToggle = (type: "ada" | "qaza") => {
     if (!checkDateAccess(user, selectedDate)) {
       setShowUpgrade(true);
       return;
     }
-    toggleDailyPrayer(selectedDate, prayer.id as NamazId, type);
+    const currentStatus = getPrayerStatus(type);
+    addPendingChange(selectedDate, {
+      type,
+      prayer: prayer.id as NamazId,
+      status: !currentStatus,
+    });
   };
 
   return (
@@ -43,7 +65,7 @@ export function PrayerCard({ prayer }: PrayerCardProps) {
         <button
           onClick={() => handleToggle("ada")}
           className={`flex flex-col items-center justify-center w-12 h-14 rounded-2xl transition-all border cursor-pointer ${
-            dayLog.ada?.[prayer.id as NamazId]
+            getPrayerStatus("ada")
               ? "bg-blue-600 border-blue-400 text-white shadow-lg"
               : "bg-slate-800 border-slate-700 text-slate-500"
           }`}
@@ -54,7 +76,7 @@ export function PrayerCard({ prayer }: PrayerCardProps) {
         <button
           onClick={() => handleToggle("qaza")}
           className={`flex flex-col items-center justify-center w-12 h-14 rounded-2xl transition-all border cursor-pointer ${
-            dayLog.qaza?.[prayer.id as NamazId]
+            getPrayerStatus("qaza")
               ? "bg-emerald-600 border-emerald-400 text-white shadow-lg"
               : "bg-slate-800 border-slate-700 text-slate-500"
           }`}

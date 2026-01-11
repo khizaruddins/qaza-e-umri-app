@@ -6,9 +6,22 @@ import type {
   AdjustModal,
   ConfirmModal,
   Currency,
+  NamazId,
 } from "@/lib/types";
 
+interface PendingPrayerChange {
+  type: "ada" | "qaza";
+  prayer: NamazId;
+  status: boolean;
+}
+
 interface UIState {
+  // Pending Changes for batch updates
+  pendingChanges: Record<string, PendingPrayerChange[]>;
+  addPendingChange: (date: string, change: PendingPrayerChange) => void;
+  clearPendingChanges: (date: string) => void;
+  hasPendingChanges: (date: string) => boolean;
+
   // Toast
   toast: Toast | null;
   setToast: (toast: Toast | null) => void;
@@ -52,7 +65,33 @@ interface UIState {
   setSelectedDate: (date: string) => void;
 }
 
-export const useUIStore = create<UIState>((set) => ({
+export const useUIStore = create<UIState>((set, get) => ({
+  // Pending Changes
+  pendingChanges: {},
+  addPendingChange: (date, change) => {
+    const state = get();
+    const existing = state.pendingChanges[date] || [];
+    // Remove any existing change for the same prayer and type
+    const filtered = existing.filter(
+      (c) => !(c.prayer === change.prayer && c.type === change.type)
+    );
+    set({
+      pendingChanges: {
+        ...state.pendingChanges,
+        [date]: [...filtered, change],
+      },
+    });
+  },
+  clearPendingChanges: (date) => {
+    const state = get();
+    const { [date]: _, ...rest } = state.pendingChanges;
+    set({ pendingChanges: rest });
+  },
+  hasPendingChanges: (date) => {
+    const state = get();
+    return (state.pendingChanges[date] || []).length > 0;
+  },
+
   // Toast
   toast: null,
   setToast: (toast) => set({ toast }),

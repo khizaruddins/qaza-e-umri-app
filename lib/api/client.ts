@@ -13,7 +13,11 @@ const apiClient = axios.create({
 // Request interceptor
 apiClient.interceptors.request.use(
   (config) => {
-    // No need to manually attach token if using HTTP-only cookies
+    // Attach access token from localStorage if available
+    const token = localStorage.getItem("access_token");
+    if (token && config.headers) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
     return config;
   },
   (error) => {
@@ -28,30 +32,52 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
 
     // Handle 401 Unauthorized (Token Expired)
-    // Don't retry if we are already on the auth endpoints (login/signup)
+    // Don't retry if we are already on the auth endpoints (login/signup/refresh)
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
       !originalRequest.url?.includes("/auth/login") &&
-      !originalRequest.url?.includes("/auth/signup")
+      !originalRequest.url?.includes("/auth/signup") &&
+      !originalRequest.url?.includes("/auth/refresh")
     ) {
       originalRequest._retry = true;
 
       try {
         // Attempt to refresh token
-        // We use axios directly to avoid infinite loops if the interceptor is attached
-        await axios.post(
+        const refreshToken = localStorage.getItem("refresh_token");
+
+        if (!refreshToken) {
+          throw new Error("No refresh token available");
+        }
+
+        const response = await axios.post(
           `${apiClient.defaults.baseURL}/auth/refresh`,
-          {},
-          { withCredentials: true }
+          { refreshToken },
+          {
+            withCredentials: true,
+            headers: { "Content-Type": "application/json" },
+          }
         );
+
+        // Save new tokens
+        const { accessToken, refreshToken: newRefreshToken } = response.data;
+        localStorage.setItem("access_token", accessToken);
+        if (newRefreshToken) {
+          localStorage.setItem("refresh_token", newRefreshToken);
+        }
+
+        // Update the authorization header for the retry
+        if (originalRequest.headers) {
+          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        }
 
         // Retry the original request
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, redirect to login
+        // Refresh failed, clear tokens and redirect to login
         if (typeof window !== "undefined") {
-          // Clear local storage to remove stale user data
+          localStorage.removeItem("access_token");
+          localStorage.removeItem("refresh_token");
           localStorage.removeItem(STORAGE_KEY);
 
           // Only redirect if not already on the auth page to avoid loops

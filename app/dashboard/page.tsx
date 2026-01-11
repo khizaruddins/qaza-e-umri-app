@@ -1,17 +1,49 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2 } from "lucide-react";
-import { useAppStore } from "@/lib/store";
+import { useAppStore, useUIStore } from "@/lib/store";
 import { Navigation } from "@/components/layout/Navigation";
 import { DashboardContent } from "@/components/pages/DashboardContent";
 import { DisclaimerModal } from "@/components/modals/DisclaimerModal";
 import { PaymentModal } from "@/components/modals/PaymentModal";
+import { RakatInputModal } from "@/components/modals/RakatInputModal";
+import type { NamazId } from "@/lib/types";
 
 export default function DashboardPage() {
   const router = useRouter();
   const user = useAppStore((state) => state.user);
+  const adjustModal = useUIStore((state) => state.adjustModal);
+  const setAdjustModal = useUIStore((state) => state.setAdjustModal);
+  const adjustRakatDebt = useAppStore((state) => state.adjustRakatDebt);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const adjustModal = useUIStore((state) => state.adjustModal);
+  const setAdjustModal = useUIStore((state) => state.setAdjustModal);
+  const adjustRakatDebt = useAppStore((state) => state.adjustRakatDebt);
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleRakatSubmit = async (prayer: NamazId, rakats: number) => {
+    if (!adjustModal.prayerId) return;
+    
+    setIsProcessing(true);
+    try {
+      const operation = adjustModal.type === "clear" ? "subtract" : "add";
+      await adjustRakatDebt(prayer, rakats, operation);
+      
+      // Close modal
+      setAdjustModal({ isOpen: false, type: "clear", prayerId: null });
+    } catch (error) {
+      console.error("Failed to adjust rakat debt:", error);
+      alert("Failed to update debt. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setAdjustModal({ isOpen: false, type: "clear", prayerId: null });
+  };
 
   useEffect(() => {
     if (!user) {
@@ -37,6 +69,13 @@ export default function DashboardPage() {
       {/* Modals */}
       <DisclaimerModal />
       <PaymentModal />
+      <RakatInputModal
+        isOpen={adjustModal.isOpen}
+        onClose={handleCloseModal}
+        prayer={adjustModal.prayerId || "fajr"}
+        mode={adjustModal.type === "clear" ? "remove" : "add"}
+        onSubmit={handleRakatSubmit}
+      />
     </div>
   );
 }
