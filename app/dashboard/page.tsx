@@ -18,19 +18,15 @@ export default function DashboardPage() {
   const setAdjustModal = useUIStore((state) => state.setAdjustModal);
   const adjustRakatDebt = useAppStore((state) => state.adjustRakatDebt);
   const [isProcessing, setIsProcessing] = useState(false);
-  const adjustModal = useUIStore((state) => state.adjustModal);
-  const setAdjustModal = useUIStore((state) => state.setAdjustModal);
-  const adjustRakatDebt = useAppStore((state) => state.adjustRakatDebt);
-  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleRakatSubmit = async (prayer: NamazId, rakats: number) => {
     if (!adjustModal.prayerId) return;
-    
+
     setIsProcessing(true);
     try {
       const operation = adjustModal.type === "clear" ? "subtract" : "add";
       await adjustRakatDebt(prayer, rakats, operation);
-      
+
       // Close modal
       setAdjustModal({ isOpen: false, type: "clear", prayerId: null });
     } catch (error) {
