@@ -1,6 +1,18 @@
 "use client";
 
-import { LogOut, Heart, Trophy, Clock, Save } from "lucide-react";
+import {
+  LogOut,
+  Heart,
+  Trophy,
+  Clock,
+  Save,
+  FileText,
+  Shield,
+  Phone,
+  HelpCircle,
+  ChevronRight,
+} from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAppStore, useUIStore } from "@/lib/store";
 import { Navigation } from "@/components/layout/Navigation";
@@ -14,7 +26,7 @@ export default function SettingsPage() {
   const user = useAppStore((state) => state.user);
   const updateUser = useAppStore((state) => state.updateUser);
   const calculateInitialDebt = useAppStore(
-    (state) => state.calculateInitialDebt
+    (state) => state.calculateInitialDebt,
   );
   const resetApp = useAppStore((state) => state.resetApp);
 
@@ -57,7 +69,7 @@ export default function SettingsPage() {
 
   const triggerPaymentDisclaimer = (
     type: "subscription" | "tip",
-    amount: number
+    amount: number,
   ) => {
     setDisclaimerModal({
       isOpen: true,
@@ -290,6 +302,95 @@ export default function SettingsPage() {
                   {user?.address || "-"}
                 </span>
               </div>
+            </div>
+          </div>
+
+          {/* Legal & Support */}
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] space-y-4">
+            <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest px-2">
+              Legal & Support
+            </h4>
+            <div className="space-y-1">
+              <Link
+                href="/terms"
+                className="flex items-center justify-between p-3 hover:bg-slate-800/50 rounded-xl transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-slate-700 transition-colors">
+                    <FileText
+                      size={14}
+                      className="text-slate-400 group-hover:text-emerald-400"
+                    />
+                  </div>
+                  <span className="text-sm font-medium text-slate-300 group-hover:text-white">
+                    Terms & Conditions
+                  </span>
+                </div>
+                <ChevronRight
+                  size={14}
+                  className="text-slate-600 group-hover:text-slate-400"
+                />
+              </Link>
+              <Link
+                href="/privacy"
+                className="flex items-center justify-between p-3 hover:bg-slate-800/50 rounded-xl transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-slate-700 transition-colors">
+                    <Shield
+                      size={14}
+                      className="text-slate-400 group-hover:text-emerald-400"
+                    />
+                  </div>
+                  <span className="text-sm font-medium text-slate-300 group-hover:text-white">
+                    Privacy Policy
+                  </span>
+                </div>
+                <ChevronRight
+                  size={14}
+                  className="text-slate-600 group-hover:text-slate-400"
+                />
+              </Link>
+              <Link
+                href="/refund-policy"
+                className="flex items-center justify-between p-3 hover:bg-slate-800/50 rounded-xl transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-slate-700 transition-colors">
+                    <HelpCircle
+                      size={14}
+                      className="text-slate-400 group-hover:text-emerald-400"
+                    />
+                  </div>
+                  <span className="text-sm font-medium text-slate-300 group-hover:text-white">
+                    Cancellation & Refunds
+                  </span>
+                </div>
+                <ChevronRight
+                  size={14}
+                  className="text-slate-600 group-hover:text-slate-400"
+                />
+              </Link>
+              <Link
+                href="/contact"
+                className="flex items-center justify-between p-3 hover:bg-slate-800/50 rounded-xl transition-colors group"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center group-hover:bg-slate-700 transition-colors">
+                    <Phone
+                      size={14}
+                      className="text-slate-400 group-hover:text-emerald-400"
+                    />
+                  </div>
+                  <span className="text-sm font-medium text-slate-300 group-hover:text-white">
+                    Contact Us
+                  </span>
+                </div>
+                <ChevronRight
+                  size={14}
+                  className="text-slate-600 group-hover:text-slate-400"
+                />
+              </Link>
             </div>
           </div>
 
