@@ -29,6 +29,36 @@ function AuthContent() {
     }
   }, [user, router]);
 
+  useEffect(() => {
+    const handleAutoLogin = async () => {
+      const email = searchParams.get("email");
+      const mode = searchParams.get("mode");
+
+      if (email === "test@test.com" && mode === "test") {
+        setAuthMode("login");
+        setFormData((prev) => ({
+          ...prev,
+          email,
+          password: "Test@123",
+        }));
+
+        setLoading(true);
+        try {
+          await login({
+            email,
+            password: "Test@123",
+          });
+          router.push("/dashboard");
+        } catch (err: any) {
+          setError(err.message || "Auto login failed");
+          setLoading(false);
+        }
+      }
+    };
+
+    handleAutoLogin();
+  }, [searchParams, login, router]);
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -44,6 +74,12 @@ function AuthContent() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (formData.email !== "test@test.com") {
+      setError("Only test@test.com is allowed to login");
+      setLoading(false);
+      return;
+    }
 
     try {
       if (authMode === "signup") {
