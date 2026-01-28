@@ -25,6 +25,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const user = useAppStore((state) => state.user);
   const updateUser = useAppStore((state) => state.updateUser);
+  const updateSettings = useAppStore((state) => state.updateSettings);
   const calculateInitialDebt = useAppStore(
     (state) => state.calculateInitialDebt,
   );
@@ -231,7 +232,7 @@ export default function SettingsPage() {
               </label>
               <div className="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-2xl border border-slate-800">
                 <button
-                  onClick={() => updateUser({ trackingMode: "CHECKLIST" })}
+                  onClick={() => updateSettings({ trackingMode: "CHECKLIST" })}
                   className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all ${
                     user?.trackingMode === "CHECKLIST"
                       ? "bg-emerald-600 text-white shadow-lg"
@@ -241,7 +242,7 @@ export default function SettingsPage() {
                   Checklist
                 </button>
                 <button
-                  onClick={() => updateUser({ trackingMode: "CALCULATOR" })}
+                  onClick={() => updateSettings({ trackingMode: "CALCULATOR" })}
                   className={`py-3 rounded-xl text-[10px] font-black uppercase transition-all ${
                     user?.trackingMode === "CALCULATOR"
                       ? "bg-emerald-600 text-white shadow-lg"

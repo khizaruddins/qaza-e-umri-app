@@ -44,11 +44,15 @@ interface AppState {
 
   // User Actions
   updateUser: (updates: Partial<User>) => Promise<void>;
+  updateSettings: (settings: {
+    trackingMode?: TrackingMode;
+    qazaGoalYears?: number;
+  }) => Promise<void>;
   completeOnboarding: (data: OnboardingData) => Promise<void>;
   createSubscription: (amount: number, currency: string) => Promise<string>;
   submitPaymentProof: (
     transactionId: string,
-    subscriptionId?: string
+    subscriptionId?: string,
   ) => Promise<void>;
   checkSubscriptionStatus: () => Promise<void>;
 
@@ -56,7 +60,7 @@ interface AppState {
   toggleDailyPrayer: (
     date: string,
     prayerId: NamazId,
-    type: "ada" | "qaza"
+    type: "ada" | "qaza",
   ) => Promise<void>;
   batchUpdatePrayers: (
     date: string,
@@ -64,7 +68,7 @@ interface AppState {
       type: "ada" | "qaza";
       prayer: NamazId;
       status: boolean;
-    }>
+    }>,
   ) => Promise<void>;
   getDailyLog: (date: string) => DailyLog;
 
@@ -72,7 +76,7 @@ interface AppState {
   adjustRakatDebt: (
     prayerId: NamazId,
     amount: number,
-    operation: "add" | "subtract"
+    operation: "add" | "subtract",
   ) => Promise<void>;
   calculateInitialDebt: (years: number, isPremium: boolean) => Promise<void>;
   resetDebt: () => Promise<void>;
@@ -137,8 +141,8 @@ export const useAppStore = create<AppState>()(
             localStorage.setItem("refresh_token", response.refreshToken);
           }
 
-          set({ user: response.user, isLoading: false });
-          await get().fetchInitialData();
+          // Fetch fresh user details including tracking mode from server
+          await get().checkAuth();
         } catch (error: any) {
           set({ error: error.message || "Login failed", isLoading: false });
           throw error;
@@ -247,7 +251,7 @@ export const useAppStore = create<AppState>()(
           await notificationAPI.markAsRead(id);
           set((state) => ({
             notifications: state.notifications.map((n) =>
-              n.id === id ? { ...n, isRead: true } : n
+              n.id === id ? { ...n, isRead: true } : n,
             ),
           }));
         } catch (error) {
@@ -277,6 +281,18 @@ export const useAppStore = create<AppState>()(
           set({ user: updatedUser });
         } catch (error) {
           console.error("Failed to update profile", error);
+          throw error;
+        }
+      },
+
+      updateSettings: async (settings) => {
+        try {
+          const updatedUser = await userAPI.updateSettings(settings);
+          set({ user: updatedUser });
+          // Refresh data based on new settings (e.g. if tracking mode changes)
+          await get().checkAuth();
+        } catch (error) {
+          console.error("Failed to update settings", error);
           throw error;
         }
       },
@@ -359,7 +375,7 @@ export const useAppStore = create<AppState>()(
           const change = newVal ? -1 : 1;
           newRakatStats[prayerId] = Math.max(
             0,
-            (state.rakatStats[prayerId] || 0) + change
+            (state.rakatStats[prayerId] || 0) + change,
           );
         }
 
@@ -407,7 +423,7 @@ export const useAppStore = create<AppState>()(
               const change = status ? -1 : 1;
               newRakatStats[prayer] = Math.max(
                 0,
-                (newRakatStats[prayer] || 0) + change
+                (newRakatStats[prayer] || 0) + change,
               );
             }
           }
@@ -507,6 +523,6 @@ export const useAppStore = create<AppState>()(
         user: state.user,
         rakatStats: state.rakatStats,
       }),
-    }
-  )
+    },
+  ),
 );

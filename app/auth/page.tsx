@@ -1,23 +1,31 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Mail, Key, Loader2, User } from "lucide-react";
 import { useAppStore } from "@/lib/store/appStore";
 
-export default function AuthPage() {
+function AuthContent() {
   const router = useRouter();
-  const { login, signup, user, checkAuth } = useAppStore();
+  const searchParams = useSearchParams();
+  const { login, signup, user } = useAppStore();
+
   const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Removed checkAuth() call to prevent loop on auth page.
-  // We rely on the user being null initially or redirected from protected pages.
+  useEffect(() => {
+    const view = searchParams.get("view");
+    if (view === "login") {
+      setAuthMode("login");
+    } else if (view === "register" || view === "signup") {
+      setAuthMode("signup");
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (user) {
-      router.push("/");
+      router.push("/dashboard");
     }
   }, [user, router]);
 
@@ -54,7 +62,7 @@ export default function AuthPage() {
           email: formData.email,
           password: formData.password,
         });
-        router.push("/");
+        router.push("/dashboard");
       }
     } catch (err: any) {
       setError(err.message || "Authentication failed");
@@ -172,5 +180,19 @@ export default function AuthPage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function AuthPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-slate-950 text-white">
+          Loading...
+        </div>
+      }
+    >
+      <AuthContent />
+    </Suspense>
   );
 }

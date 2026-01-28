@@ -1,35 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Clock, Loader2 } from "lucide-react";
-import { useAppStore } from "@/lib/store";
+import { Header } from "@/components/landing/Header";
+import { Hero } from "@/components/landing/Hero";
+import { Features } from "@/components/landing/Features";
+import { Pricing } from "@/components/landing/Pricing";
+import { Footer } from "@/components/landing/Footer";
 
-export default function SplashPage() {
-  const router = useRouter();
-  const user = useAppStore((state) => state.user);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (!user) {
-        router.push("/auth");
-      } else {
-        router.push("/dashboard");
-      }
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, [user, router]);
-
+export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center p-8">
-      <div className="relative bg-emerald-500 w-24 h-24 rounded-[2.5rem] rotate-12 flex items-center justify-center shadow-2xl">
-        <Clock className="text-white w-12 h-12 -rotate-12" />
-      </div>
-      <h1 className="text-4xl font-black text-white mt-8 tracking-tighter">
-        Qaza-e-Umri
-      </h1>
-      <Loader2 className="animate-spin text-slate-700 mt-12" size={24} />
+    <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-emerald-500/30">
+      <Header />
+      <main>
+        <Hero />
+        <Features />
+        <Pricing />
+      </main>
+      <Footer />
     </div>
   );
 }

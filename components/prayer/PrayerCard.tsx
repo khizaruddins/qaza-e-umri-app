@@ -20,13 +20,14 @@ export function PrayerCard({ prayer }: PrayerCardProps) {
   const selectedDate = useUIStore((state) => state.selectedDate);
   const setShowUpgrade = useUIStore((state) => state.setShowUpgrade);
   const getDailyLog = useAppStore((state) => state.getDailyLog);
+  const rakatStats = useAppStore((state) => state.rakatStats);
   const addPendingChange = useUIStore((state) => state.addPendingChange);
   const allPendingChanges = useUIStore((state) => state.pendingChanges);
 
   // Memoize pending changes to prevent infinite loop
   const pendingChanges = useMemo(
     () => allPendingChanges[selectedDate] || [],
-    [allPendingChanges, selectedDate]
+    [allPendingChanges, selectedDate],
   );
 
   const dayLog = getDailyLog(selectedDate);
@@ -34,7 +35,7 @@ export function PrayerCard({ prayer }: PrayerCardProps) {
   // Check if there's a pending change for this prayer
   const getPrayerStatus = (type: "ada" | "qaza") => {
     const pending = pendingChanges.find(
-      (c) => c.prayer === prayer.id && c.type === type
+      (c) => c.prayer === prayer.id && c.type === type,
     );
     if (pending) return pending.status;
     return dayLog[type]?.[prayer.id as NamazId] || false;
@@ -57,9 +58,14 @@ export function PrayerCard({ prayer }: PrayerCardProps) {
     <div className="bg-slate-900 border border-slate-800 p-5 rounded-[2rem] flex items-center justify-between">
       <div className="flex-1">
         <h4 className="font-black text-lg text-white">{prayer.name}</h4>
-        <p className="text-slate-500 text-[10px] font-bold uppercase">
-          {prayer.sunnah}
-        </p>
+        <div className="flex flex-col gap-0.5">
+          <p className="text-slate-500 text-[10px] font-bold uppercase">
+            {prayer.sunnah}
+          </p>
+          <p className="text-amber-500/80 text-[10px] font-bold uppercase">
+            Debt: {rakatStats[prayer.id as NamazId]?.toLocaleString() || 0}
+          </p>
+        </div>
       </div>
       <div className="flex gap-3">
         <button
