@@ -9,6 +9,7 @@ import type {
   AuthCredentials,
   OnboardingData,
   Notification,
+  TrackingMode,
 } from "@/lib/types";
 import { STORAGE_KEY, NAMAZ_TYPES } from "@/lib/constants";
 import {
