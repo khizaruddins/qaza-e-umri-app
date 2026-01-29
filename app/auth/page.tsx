@@ -75,12 +75,6 @@ function AuthContent() {
     setLoading(true);
     setError(null);
 
-    if (formData.email !== "test@test.com") {
-      setError("Only test@test.com is allowed to login");
-      setLoading(false);
-      return;
-    }
-
     try {
       if (authMode === "signup") {
         if (formData.password !== formData.confirmPassword) {
