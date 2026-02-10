@@ -3,6 +3,8 @@ import React from "react";
 import { motion } from "framer-motion";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { useAppStore } from "@/lib/store/appStore";
+import { useUIStore } from "@/lib/store/uiStore";
 
 const plans = [
   {
@@ -50,6 +52,61 @@ const plans = [
 ];
 
 export function Pricing() {
+  const createSubscription = useAppStore((state) => state.createSubscription);
+  const verifySubscription = useAppStore((state) => state.verifySubscription);
+  const showToast = useUIStore((state) => state.showToast);
+  const user = useAppStore((state) => state.user);
+
+  const handleSubscribe = async (planName: string) => {
+    if (planName === "Trial") {
+      // Redirect to signup or dashboard if trial logic is improved
+      window.location.href = "/auth";
+      return;
+    }
+
+    if (!user) {
+      showToast("error", "Please login to subscribe");
+      window.location.href = "/auth";
+      return;
+    }
+
+    const planType = planName.toUpperCase() as "MONTHLY" | "YEARLY";
+
+    try {
+      const response = await createSubscription(planType, "INR");
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        subscription_id: response.razorpaySubscriptionId,
+        name: "Qaza-e-Umri",
+        description: `${planName} Subscription`,
+        handler: async (paymentResponse: any) => {
+          try {
+            await verifySubscription(paymentResponse);
+            showToast("success", "Subscription activated successfully!");
+          } catch (err: any) {
+            showToast(
+              "error",
+              err.message || "Subscription verification failed.",
+            );
+          }
+        },
+        prefill: {
+          name: user.name,
+          email: user.email,
+        },
+        theme: {
+          color: "#10b981",
+        },
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
+    } catch (error: any) {
+      showToast("error", error.message || "Failed to start subscription");
+    }
+  };
+
   return (
     <section id="plans" className="py-24 bg-slate-950 relative overflow-hidden">
       {/* Background decoration */}
@@ -113,6 +170,7 @@ export function Pricing() {
               </ul>
 
               <button
+                onClick={() => handleSubscribe(plan.name)}
                 className={cn(
                   "w-full py-3 rounded-xl font-bold transition-all",
                   plan.highlight

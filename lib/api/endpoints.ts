@@ -43,7 +43,7 @@ export const userAPI = {
 
   getSubscriptionStatus: () =>
     apiClient.get<any, { isPremium: boolean; subscriptionStatus: string }>(
-      "/users/subscription-status"
+      "/users/subscription-status",
     ),
 };
 
@@ -66,19 +66,47 @@ export const qazaAPI = {
 
 // Payment APIs
 export const paymentAPI = {
-  createSubscription: (data: { amount: number; currency: string }) =>
-    apiClient.post<any, { subscriptionId: string }>(
-      "/payment/subscription",
-      data
+  // Subscription
+  createSubscription: (data: {
+    planType: "MONTHLY" | "YEARLY";
+    currency: "INR";
+  }) =>
+    apiClient.post<
+      any,
+      {
+        id: string;
+        razorpaySubscriptionId: string;
+        gateway: string;
+        status: string;
+        amount: number;
+      }
+    >("/payment/razorpay/subscription", data),
+
+  verifySubscription: (data: {
+    razorpayPaymentId: string;
+    razorpaySubscriptionId: string;
+    razorpaySignature: string;
+  }) =>
+    apiClient.post<any, { success: boolean; user: User }>(
+      "/payment/razorpay/subscription/verify",
+      data,
     ),
 
-  submitProof: (data: { transactionId: string; subscriptionId?: string }) =>
-    apiClient.post<any, { success: boolean }>("/payment/submit-proof", data),
+  // Tips / Hadiya
+  createTip: (data: { amount: number; currency: string; message?: string }) =>
+    apiClient.post<
+      any,
+      { id: string; razorpayOrderId: string; amount: number; status: string }
+    >("/payment/razorpay/tip", data),
 
-  approve: (data: { transactionId: string; amount: number; type: string }) =>
-    apiClient.post<any, { success: boolean; user: User }>(
-      "/payment/approve",
-      data
+  verifyTip: (data: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }) =>
+    apiClient.post<any, { success: boolean }>(
+      "/payment/razorpay/tip/verify",
+      data,
     ),
 };
 
@@ -94,7 +122,7 @@ export const dailyLogAPI = {
 
   togglePrayer: (
     date: string,
-    data: { type: "ada" | "qaza"; prayer: NamazId; status: boolean }
+    data: { type: "ada" | "qaza"; prayer: NamazId; status: boolean },
   ) => apiClient.patch<any, ApiDailyLog>(`/daily-logs/${date}`, data),
 
   batchUpdatePrayers: (
@@ -105,7 +133,7 @@ export const dailyLogAPI = {
         prayer: NamazId;
         status: boolean;
       }>;
-    }
+    },
   ) => apiClient.patch<any, ApiDailyLog>(`/daily-logs/${date}/batch`, data),
 
   getUncheckedLogs: () =>

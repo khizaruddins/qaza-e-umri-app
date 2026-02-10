@@ -50,11 +50,29 @@ interface AppState {
     qazaGoalYears?: number;
   }) => Promise<void>;
   completeOnboarding: (data: OnboardingData) => Promise<void>;
-  createSubscription: (amount: number, currency: string) => Promise<string>;
-  submitPaymentProof: (
-    transactionId: string,
-    subscriptionId?: string,
-  ) => Promise<void>;
+
+  // Payment Actions
+  createSubscription: (
+    planType: "MONTHLY" | "YEARLY",
+    currency: "INR",
+  ) => Promise<any>;
+  verifySubscription: (data: {
+    razorpayPaymentId: string;
+    razorpaySubscriptionId: string;
+    razorpaySignature: string;
+  }) => Promise<void>;
+
+  createTipOrder: (
+    amount: number,
+    currency: string,
+    message?: string,
+  ) => Promise<any>;
+  verifyTipOrder: (data: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }) => Promise<void>;
+
   checkSubscriptionStatus: () => Promise<void>;
 
   // Daily Logs
@@ -308,15 +326,15 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      createSubscription: async (amount, currency) => {
+      createSubscription: async (planType, currency) => {
         set({ isLoading: true, error: null });
         try {
           const response = await paymentAPI.createSubscription({
-            amount,
+            planType,
             currency,
           });
           set({ isLoading: false });
-          return response.subscriptionId;
+          return response;
         } catch (error: any) {
           set({
             error: error.message || "Failed to create subscription",
@@ -326,17 +344,51 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      submitPaymentProof: async (transactionId, subscriptionId) => {
+      verifySubscription: async (data) => {
         set({ isLoading: true, error: null });
         try {
-          await paymentAPI.submitProof({
-            transactionId,
-            subscriptionId,
+          const response = await paymentAPI.verifySubscription(data);
+          if (response.success && response.user) {
+            set({ user: response.user, isLoading: false });
+          } else {
+            set({ isLoading: false });
+          }
+        } catch (error: any) {
+          set({
+            error: error.message || "Failed to verify subscription",
+            isLoading: false,
           });
+          throw error;
+        }
+      },
+
+      createTipOrder: async (amount, currency, message) => {
+        set({ isLoading: true, error: null });
+        try {
+          const response = await paymentAPI.createTip({
+            amount,
+            currency,
+            message,
+          });
+          set({ isLoading: false });
+          return response;
+        } catch (error: any) {
+          set({
+            error: error.message || "Failed to create tip order",
+            isLoading: false,
+          });
+          throw error;
+        }
+      },
+
+      verifyTipOrder: async (data) => {
+        set({ isLoading: true, error: null });
+        try {
+          await paymentAPI.verifyTip(data);
           set({ isLoading: false });
         } catch (error: any) {
           set({
-            error: error.message || "Failed to submit payment proof",
+            error: error.message || "Failed to verify tip",
             isLoading: false,
           });
           throw error;
