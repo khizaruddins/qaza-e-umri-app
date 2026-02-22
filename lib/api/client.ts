@@ -1,28 +1,25 @@
-import axios from "axios";
-import { STORAGE_KEY } from "@/lib/constants";
+import axios from 'axios';
+import { STORAGE_KEY } from '@/lib/constants';
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL || "http://localhost:3200/api",
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3200/api',
   timeout: 10000,
   headers: {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   },
-  withCredentials: true, // Important for Cookies
+  withCredentials: true, // Important for httpOnly cookies - automatically includes cookies in requests
 });
 
 // Request interceptor
 apiClient.interceptors.request.use(
   (config) => {
-    // Attach access token from localStorage if available
-    const token = localStorage.getItem("access_token");
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
+    // With httpOnly cookies, the browser automatically includes them in requests
+    // No need to manually attach tokens
     return config;
   },
   (error) => {
     return Promise.reject(error);
-  }
+  },
 );
 
 // Response interceptor
@@ -36,53 +33,37 @@ apiClient.interceptors.response.use(
     if (
       error.response?.status === 401 &&
       !originalRequest._retry &&
-      !originalRequest.url?.includes("/auth/login") &&
-      !originalRequest.url?.includes("/auth/signup") &&
-      !originalRequest.url?.includes("/auth/refresh")
+      !originalRequest.url?.includes('/auth/login') &&
+      !originalRequest.url?.includes('/auth/signup') &&
+      !originalRequest.url?.includes('/auth/refresh')
     ) {
       originalRequest._retry = true;
 
       try {
-        // Attempt to refresh token
-        const refreshToken = localStorage.getItem("refresh_token");
-
-        if (!refreshToken) {
-          throw new Error("No refresh token available");
-        }
-
-        const response = await axios.post(
+        // Attempt to refresh token via refresh endpoint
+        // The refresh token is stored in httpOnly cookie and sent automatically
+        await axios.post(
           `${apiClient.defaults.baseURL}/auth/refresh`,
-          { refreshToken },
+          {},
           {
             withCredentials: true,
-            headers: { "Content-Type": "application/json" },
-          }
+            headers: { 'Content-Type': 'application/json' },
+          },
         );
 
-        // Save new tokens
-        const { accessToken, refreshToken: newRefreshToken } = response.data;
-        localStorage.setItem("access_token", accessToken);
-        if (newRefreshToken) {
-          localStorage.setItem("refresh_token", newRefreshToken);
-        }
+        // Tokens are now stored as httpOnly cookies by the server
+        // No need to manually save them
 
-        // Update the authorization header for the retry
-        if (originalRequest.headers) {
-          originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-        }
-
-        // Retry the original request
+        // Retry the original request with new token (in cookie)
         return apiClient(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, clear tokens and redirect to login
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("access_token");
-          localStorage.removeItem("refresh_token");
+        // Refresh failed, clear app state and redirect to login
+        if (typeof window !== 'undefined') {
           localStorage.removeItem(STORAGE_KEY);
 
           // Only redirect if not already on the auth page to avoid loops
-          if (!window.location.pathname.includes("/auth")) {
-            window.location.href = "/auth";
+          if (!window.location.pathname.includes('/auth')) {
+            window.location.href = '/auth';
           }
         }
         return Promise.reject(refreshError);
@@ -90,7 +71,7 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default apiClient;

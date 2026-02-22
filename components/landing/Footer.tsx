@@ -1,7 +1,7 @@
-"use client";
-import React from "react";
-import Link from "next/link";
-import { Clock, Instagram, Twitter, Facebook } from "lucide-react";
+'use client';
+import React from 'react';
+import Link from 'next/link';
+import { Clock, Instagram, Twitter, Facebook } from 'lucide-react';
 
 export function Footer() {
   return (
@@ -53,22 +53,22 @@ export function Footer() {
             <h4 className="text-white font-bold mb-4">Resources</h4>
             <ul className="space-y-2 text-sm text-slate-400">
               <li>
-                <Link href="#" className="hover:text-emerald-400">
+                <Link href="/privacy" className="hover:text-emerald-400">
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link href="#" className="hover:text-emerald-400">
+                <Link href="/terms" className="hover:text-emerald-400">
                   Terms of Service
                 </Link>
               </li>
               <li>
-                <Link href="#" className="hover:text-emerald-400">
+                <Link href="/faq" className="hover:text-emerald-400">
                   FAQ
                 </Link>
               </li>
               <li>
-                <Link href="#" className="hover:text-emerald-400">
+                <Link href="/contact" className="hover:text-emerald-400">
                   Contact Support
                 </Link>
               </li>

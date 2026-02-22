@@ -1,4 +1,4 @@
-import apiClient from "./client";
+import apiClient from './client';
 import type {
   User,
   AuthCredentials,
@@ -10,119 +10,161 @@ import type {
   NamazId,
   TrackingMode,
   Notification,
-} from "@/lib/types";
+} from '@/lib/types';
 
 // Auth APIs
 export const authAPI = {
   signup: (credentials: AuthCredentials) =>
-    apiClient.post<any, AuthResponse>("/auth/signup", credentials),
+    apiClient.post<AuthCredentials, AuthResponse>('/auth/signup', credentials),
 
-  login: (credentials: Omit<AuthCredentials, "name">) =>
-    apiClient.post<any, AuthResponse>("/auth/login", credentials),
+  login: (credentials: Omit<AuthCredentials, 'name'>) =>
+    apiClient.post<Omit<AuthCredentials, 'name'>, AuthResponse>(
+      '/auth/login',
+      credentials,
+    ),
 
   refresh: (refreshToken: string) =>
-    apiClient.post<any, AuthResponse>("/auth/refresh", { refreshToken }),
+    apiClient.post<{ refreshToken: string }, AuthResponse>('/auth/refresh', {
+      refreshToken,
+    }),
 
-  getMe: () => apiClient.get<any, User>("/auth/me"),
+  getMe: () => apiClient.get<void, User>('/auth/me'),
 
-  logout: () => apiClient.post<any, void>("/auth/logout", {}),
+  logout: () => apiClient.post<Record<string, never>, void>('/auth/logout', {}),
 };
 
 // User APIs
 export const userAPI = {
   updateProfile: (data: Partial<User>) =>
-    apiClient.patch<any, User>("/users/profile", data),
+    apiClient.patch<Partial<User>, User>('/users/profile', data),
 
   updateSettings: (data: {
     trackingMode?: TrackingMode;
     qazaGoalYears?: number;
-  }) => apiClient.patch<any, User>("/users/settings", data),
+  }) =>
+    apiClient.patch<
+      { trackingMode?: TrackingMode; qazaGoalYears?: number },
+      User
+    >('/users/settings', data),
 
   completeOnboarding: (data: OnboardingData) =>
-    apiClient.post<any, User>("/users/onboarding", data),
+    apiClient.post<OnboardingData, User>('/users/onboarding', data),
 
   getSubscriptionStatus: () =>
-    apiClient.get<any, { isPremium: boolean; subscriptionStatus: string }>(
-      "/users/subscription-status"
+    apiClient.get<void, { isPremium: boolean; subscriptionStatus: string }>(
+      '/users/subscription-status',
     ),
 };
 
 // Qaza (Debt) APIs
 export const qazaAPI = {
-  getDebt: () => apiClient.get<any, PrayerDebt>("/qaza"),
+  getDebt: () => apiClient.get<void, PrayerDebt>('/qaza'),
 
   calculateDebt: (data: { years: number; calculationMethod: string }) =>
-    apiClient.post<any, PrayerDebt>("/qaza/calculate", data),
+    apiClient.post<{ years: number; calculationMethod: string }, PrayerDebt>(
+      '/qaza/calculate',
+      data,
+    ),
 
   adjustDebt: (data: {
     prayer: NamazId;
     amount: number;
-    operation: "add" | "subtract";
-  }) => apiClient.patch<any, PrayerDebt>("/qaza/adjust", data),
+    operation: 'add' | 'subtract';
+  }) =>
+    apiClient.patch<
+      { prayer: NamazId; amount: number; operation: 'add' | 'subtract' },
+      PrayerDebt
+    >('/qaza/adjust', data),
 
   resetDebt: (data?: Partial<PrayerDebt>) =>
-    apiClient.post<any, PrayerDebt>("/qaza/reset", data),
+    apiClient.post<Partial<PrayerDebt> | undefined, PrayerDebt>(
+      '/qaza/reset',
+      data,
+    ),
 };
 
 // Payment APIs
 export const paymentAPI = {
   createSubscription: (data: { amount: number; currency: string }) =>
-    apiClient.post<any, { subscriptionId: string }>(
-      "/payment/subscription",
-      data
-    ),
+    apiClient.post<
+      { amount: number; currency: string },
+      { subscriptionId: string }
+    >('/payment/subscription', data),
 
   submitProof: (data: { transactionId: string; subscriptionId?: string }) =>
-    apiClient.post<any, { success: boolean }>("/payment/submit-proof", data),
+    apiClient.post<
+      { transactionId: string; subscriptionId?: string },
+      { success: boolean }
+    >('/payment/submit-proof', data),
 
   approve: (data: { transactionId: string; amount: number; type: string }) =>
-    apiClient.post<any, { success: boolean; user: User }>(
-      "/payment/approve",
-      data
-    ),
+    apiClient.post<
+      { transactionId: string; amount: number; type: string },
+      { success: boolean; user: User }
+    >('/payment/approve', data),
 };
 
 // Daily Log APIs
 export const dailyLogAPI = {
   getLogs: (startDate: string, endDate: string) =>
-    apiClient.get<any, ApiDailyLog[]>("/daily-logs", {
-      params: { startDate, endDate },
-    }),
+    apiClient.get<{ startDate: string; endDate: string }, ApiDailyLog[]>(
+      '/daily-logs',
+      {
+        params: { startDate, endDate },
+      },
+    ),
 
   getLogByDate: (date: string) =>
-    apiClient.get<any, ApiDailyLog>(`/daily-logs/${date}`),
+    apiClient.get<void, ApiDailyLog>(`/daily-logs/${date}`),
 
   togglePrayer: (
     date: string,
-    data: { type: "ada" | "qaza"; prayer: NamazId; status: boolean }
-  ) => apiClient.patch<any, ApiDailyLog>(`/daily-logs/${date}`, data),
+    data: { type: 'ada' | 'qaza'; prayer: NamazId; status: boolean },
+  ) =>
+    apiClient.patch<
+      { type: 'ada' | 'qaza'; prayer: NamazId; status: boolean },
+      ApiDailyLog
+    >(`/daily-logs/${date}`, data),
 
   batchUpdatePrayers: (
     date: string,
     data: {
       prayers: Array<{
-        type: "ada" | "qaza";
+        type: 'ada' | 'qaza';
         prayer: NamazId;
         status: boolean;
       }>;
-    }
-  ) => apiClient.patch<any, ApiDailyLog>(`/daily-logs/${date}/batch`, data),
+    },
+  ) =>
+    apiClient.patch<
+      {
+        prayers: Array<{
+          type: 'ada' | 'qaza';
+          prayer: NamazId;
+          status: boolean;
+        }>;
+      },
+      ApiDailyLog
+    >(`/daily-logs/${date}/batch`, data),
 
   getUncheckedLogs: () =>
-    apiClient.get<any, ApiDailyLog[]>("/daily-logs/unchecked/all"),
+    apiClient.get<void, ApiDailyLog[]>('/daily-logs/unchecked/all'),
 
   getDateWiseLogs: (params?: { startDate?: string; endDate?: string }) =>
-    apiClient.get<any, ApiDailyLog[]>("/daily-logs/date-wise/all", { params }),
+    apiClient.get<
+      { startDate?: string; endDate?: string } | undefined,
+      ApiDailyLog[]
+    >('/daily-logs/date-wise/all', { params }),
 };
 
 // Statistics APIs
 export const statsAPI = {
-  getSummary: () => apiClient.get<any, StatsSummary>("/stats/summary"),
+  getSummary: () => apiClient.get<void, StatsSummary>('/stats/summary'),
 };
 
 // Notification APIs
 export const notificationAPI = {
-  getAll: () => apiClient.get<any, Notification[]>("/notifications"),
+  getAll: () => apiClient.get<void, Notification[]>('/notifications'),
   markAsRead: (id: string) =>
-    apiClient.patch<any, void>(`/notifications/${id}/read`),
+    apiClient.patch<Record<string, never>, void>(`/notifications/${id}/read`),
 };

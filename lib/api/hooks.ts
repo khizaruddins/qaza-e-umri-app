@@ -1,24 +1,32 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { authAPI, userAPI, paymentAPI, dailyLogAPI } from "./endpoints";
-import type { AuthCredentials, OnboardingData } from "@/lib/types";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { authAPI, userAPI, paymentAPI, dailyLogAPI } from './endpoints';
+import type {
+  AuthCredentials,
+  OnboardingData,
+  AuthResponse,
+  User,
+} from '@/lib/types';
 
+interface CustomAuthResponse extends AuthResponse {
+  token: string;
+}
 // Query Keys
 export const queryKeys = {
-  user: ["user"] as const,
-  prayers: ["prayers"] as const,
+  user: ['user'] as const,
+  prayers: ['prayers'] as const,
   prayerLogs: (startDate: string, endDate: string) =>
-    ["prayers", "logs", startDate, endDate] as const,
+    ['prayers', 'logs', startDate, endDate] as const,
 };
 
 // Auth Hooks
 export const useLogin = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (credentials: AuthCredentials) => authAPI.login(credentials),
-    onSuccess: (data: any) => {
-      if (data.token) {
-        localStorage.setItem("auth_token", data.token);
-      }
+    mutationFn: (credentials: AuthCredentials) =>
+      authAPI.login(credentials) as Promise<CustomAuthResponse>,
+    onSuccess: () => {
+      // Token is now stored as httpOnly cookie by the server
+      // No need to manually save it to localStorage
       queryClient.invalidateQueries({ queryKey: queryKeys.user });
     },
   });
@@ -27,11 +35,11 @@ export const useLogin = () => {
 export const useSignup = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (credentials: AuthCredentials) => authAPI.signup(credentials),
-    onSuccess: (data: any) => {
-      if (data.token) {
-        localStorage.setItem("auth_token", data.token);
-      }
+    mutationFn: (credentials: AuthCredentials) =>
+      authAPI.signup(credentials) as Promise<CustomAuthResponse>,
+    onSuccess: () => {
+      // Token is now stored as httpOnly cookie by the server
+      // No need to manually save it to localStorage
       queryClient.invalidateQueries({ queryKey: queryKeys.user });
     },
   });
@@ -42,7 +50,8 @@ export const useLogout = () => {
   return useMutation({
     mutationFn: () => authAPI.logout(),
     onSuccess: () => {
-      localStorage.removeItem("auth_token");
+      // Cookies are cleared by the server on logout
+      // Just clear the query cache
       queryClient.clear();
     },
   });
@@ -60,7 +69,7 @@ export const useUserProfile = () => {
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: Partial<any>) => userAPI.updateProfile(data),
+    mutationFn: (data: Partial<User>) => userAPI.updateProfile(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.user });
     },
