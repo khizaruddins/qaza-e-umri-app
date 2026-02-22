@@ -85,23 +85,48 @@ export const qazaAPI = {
 
 // Payment APIs
 export const paymentAPI = {
-  createSubscription: (data: { amount: number; currency: string }) =>
+  // Subscription
+  createSubscription: (data: {
+    planType: 'MONTHLY' | 'YEARLY';
+    currency: 'INR';
+  }) =>
     apiClient.post<
-      { amount: number; currency: string },
-      { subscriptionId: string }
-    >('/payment/subscription', data),
+      any,
+      {
+        id: string;
+        razorpaySubscriptionId: string;
+        gateway: string;
+        status: string;
+        amount: number;
+      }
+    >('/payment/razorpay/subscription', data),
 
-  submitProof: (data: { transactionId: string; subscriptionId?: string }) =>
-    apiClient.post<
-      { transactionId: string; subscriptionId?: string },
-      { success: boolean }
-    >('/payment/submit-proof', data),
+  verifySubscription: (data: {
+    razorpayPaymentId: string;
+    razorpaySubscriptionId: string;
+    razorpaySignature: string;
+  }) =>
+    apiClient.post<any, { success: boolean; user: User }>(
+      '/payment/razorpay/subscription/verify',
+      data,
+    ),
 
-  approve: (data: { transactionId: string; amount: number; type: string }) =>
+  // Tips / Hadiya
+  createTip: (data: { amount: number; currency: string; message?: string }) =>
     apiClient.post<
-      { transactionId: string; amount: number; type: string },
-      { success: boolean; user: User }
-    >('/payment/approve', data),
+      any,
+      { id: string; razorpayOrderId: string; amount: number; status: string }
+    >('/payment/razorpay/tip', data),
+
+  verifyTip: (data: {
+    razorpayOrderId: string;
+    razorpayPaymentId: string;
+    razorpaySignature: string;
+  }) =>
+    apiClient.post<any, { success: boolean }>(
+      '/payment/razorpay/tip/verify',
+      data,
+    ),
 };
 
 // Daily Log APIs

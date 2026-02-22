@@ -30,19 +30,19 @@ export default function CalendarPage() {
 
   const handleDateClick = (dateStr: string) => {
     setSelectedDate(dateStr);
-    router.push("/");
+    router.push("/dashboard");
   };
 
   const daysInMonth = new Date(
     currentCalendarMonth.getFullYear(),
     currentCalendarMonth.getMonth() + 1,
-    0
+    0,
   ).getDate();
 
   const firstDayOfMonth = new Date(
     currentCalendarMonth.getFullYear(),
     currentCalendarMonth.getMonth(),
-    1
+    1,
   ).getDay();
 
   return (
@@ -91,7 +91,7 @@ export default function CalendarPage() {
               {Array.from({ length: daysInMonth }).map((_, i) => {
                 const dayNum = i + 1;
                 const dateStr = `${currentCalendarMonth.getFullYear()}-${String(
-                  currentCalendarMonth.getMonth() + 1
+                  currentCalendarMonth.getMonth() + 1,
                 ).padStart(2, "0")}-${String(dayNum).padStart(2, "0")}`;
                 const hasAccess = checkDateAccess(user, dateStr);
 
@@ -100,7 +100,7 @@ export default function CalendarPage() {
                     key={dateStr}
                     disabled={!hasAccess}
                     onClick={() => handleDateClick(dateStr)}
-                    className={`aspect-square rounded-2xl text-[11px] font-black flex items-center justify-center relative transition-all ${
+                    className={`aspect-square rounded-2xl text-[11px] font-black flex items-center cursor-pointer justify-center relative transition-all ${
                       selectedDate === dateStr
                         ? "bg-emerald-600 text-white"
                         : "hover:bg-slate-800 text-slate-400"

@@ -41,7 +41,7 @@ export function DashboardContent() {
   // Memoize pending changes to prevent infinite loop
   const pendingChanges = useMemo(
     () => allPendingChanges[selectedDate] || [],
-    [allPendingChanges, selectedDate]
+    [allPendingChanges, selectedDate],
   );
 
   const [isSaving, setIsSaving] = useState(false);
@@ -56,7 +56,7 @@ export function DashboardContent() {
 
   const progressPercent = calculateProgress(
     rakatStats,
-    user?.initialTotalDebt || 0
+    user?.initialTotalDebt || 0,
   );
   const totalRemainingCount = getTotalRemainingCount(rakatStats);
 
@@ -94,18 +94,14 @@ export function DashboardContent() {
     setSelectedDate(newDateStr);
   };
 
-  const handleUpgrade = async (isRenewal = false) => {
+  const handleUpgrade = (isRenewal = false) => {
     const price = SUBSCRIPTION_PRICES[tipCurrency];
-    try {
-      await createSubscription(price, tipCurrency);
-      setPaymentModal({
-        isOpen: true,
-        amount: price,
-        type: "subscription",
-      });
-    } catch (error) {
-      console.error("Failed to create subscription", error);
-    }
+    setDisclaimerModal({
+      isOpen: true,
+      type: "subscription",
+      amount: price,
+      isRenewal: isRenewal,
+    });
   };
 
   const handleSaveChanges = async () => {

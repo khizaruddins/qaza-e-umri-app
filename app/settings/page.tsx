@@ -54,18 +54,13 @@ export default function SettingsPage() {
     }
   };
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = () => {
     const price = SUBSCRIPTION_PRICES[tipCurrency];
-    try {
-      await createSubscription(price, tipCurrency);
-      setPaymentModal({
-        isOpen: true,
-        amount: price,
-        type: "subscription",
-      });
-    } catch (error) {
-      console.error("Failed to create subscription", error);
-    }
+    setDisclaimerModal({
+      isOpen: true,
+      type: "subscription",
+      amount: price,
+    });
   };
 
   const triggerPaymentDisclaimer = (
