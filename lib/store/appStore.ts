@@ -11,13 +11,12 @@ import type {
   Notification,
   TrackingMode,
 } from "@/lib/types";
-import { STORAGE_KEY, NAMAZ_TYPES } from "@/lib/constants";
+import { STORAGE_KEY } from "@/lib/constants";
 import {
   authAPI,
   userAPI,
   qazaAPI,
   dailyLogAPI,
-  statsAPI,
   paymentAPI,
   notificationAPI,
 } from "@/lib/api/endpoints";
@@ -54,7 +53,7 @@ interface AppState {
   // Payment Actions
   createSubscription: (
     planType: "MONTHLY" | "YEARLY",
-    currency: "INR",
+    currency: "INR" | "USD",
   ) => Promise<any>;
   verifySubscription: (data: {
     razorpayPaymentId: string;

@@ -1,21 +1,21 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { authAPI, userAPI, paymentAPI, dailyLogAPI } from './endpoints';
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { authAPI, userAPI, paymentAPI, dailyLogAPI } from "./endpoints";
 import type {
   AuthCredentials,
   OnboardingData,
   AuthResponse,
   User,
-} from '@/lib/types';
+} from "@/lib/types";
 
 interface CustomAuthResponse extends AuthResponse {
   token: string;
 }
 // Query Keys
 export const queryKeys = {
-  user: ['user'] as const,
-  prayers: ['prayers'] as const,
+  user: ["user"] as const,
+  prayers: ["prayers"] as const,
   prayerLogs: (startDate: string, endDate: string) =>
-    ['prayers', 'logs', startDate, endDate] as const,
+    ["prayers", "logs", startDate, endDate] as const,
 };
 
 // Auth Hooks
@@ -89,8 +89,13 @@ export const useCompleteOnboarding = () => {
 // Payment Hooks
 export const useCreateSubscription = () => {
   return useMutation({
-    mutationFn: ({ amount, currency }: { amount: number; currency: string }) =>
-      paymentAPI.createSubscription({ amount, currency }),
+    mutationFn: ({
+      planType,
+      currency,
+    }: {
+      planType: "MONTHLY" | "YEARLY";
+      currency: "INR" | "USD";
+    }) => paymentAPI.createSubscription({ planType, currency }),
   });
 };
 
