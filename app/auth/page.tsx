@@ -10,7 +10,7 @@ function AuthContent() {
   const searchParams = useSearchParams();
   const { login, signup, user } = useAppStore();
 
-  const [authMode, setAuthMode] = useState<"signup" | "login">("signup");
+  const [authMode, setAuthMode] = useState<"signup" | "login">("login");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
